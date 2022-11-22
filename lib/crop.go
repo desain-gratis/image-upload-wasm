@@ -5,8 +5,8 @@ import (
 	"image"
 )
 
-func CropByCenterAndSpoke(rect image.Rectangle, centerX int, centerY int, ratioX int, ratioY, spoke int) image.Rectangle {
-
+// scale (0 - 1.0]
+func CropByCenterAndScale(rect image.Rectangle, centerX int, centerY int, ratioX int, ratioY int, scale float64) image.Rectangle {
 	// We just need to find the max width here or use spoke
 	x1 := centerX
 	x2 := rect.Max.X - centerX
@@ -41,8 +41,13 @@ func CropByCenterAndSpoke(rect image.Rectangle, centerX int, centerY int, ratioX
 		height = maxWidth * ratioY / ratioX
 	}
 
-	return cropByCenterWidthHeight(centerX, centerY, width*2, height*2)
-	// return cropFromPointByWidth(ratioX, ratioY, size, byHeight, centerX, centerY)
+	width = width * 2
+	height = height * 2
+
+	width = int(float64(width) * scale)
+	height = int(float64(height) * scale)
+
+	return cropByCenterWidthHeight(centerX, centerY, width, height)
 }
 
 func cropByCenterWidthHeight(centerX int, centerY int, width int, height int) image.Rectangle {
@@ -50,32 +55,6 @@ func cropByCenterWidthHeight(centerX int, centerY int, width int, height int) im
 	_miny := float64(centerY) - float64(height)/2
 	_maxx := float64(centerX) + float64(width)/2
 	_maxy := float64(centerY) + float64(height)/2
-
-	return image.Rect(int(_minx), int(_miny), int(_maxx), int(_maxy))
-}
-
-// resizeFromPoint
-func cropFromPointByWidth(ratioX, ratioY int, size int, byHeight bool, centerX int, centerY int) image.Rectangle {
-	if size <= 0 || ratioX <= 0 || ratioY <= 0 {
-		return image.Rectangle{
-			Min: image.Pt(centerX, centerY),
-			Max: image.Pt(centerX, centerY),
-		}
-	}
-
-	// resize by width.
-	uW := float64(1)
-	uH := float64(ratioY) / float64(ratioX)
-
-	if byHeight {
-		uW = float64(ratioX) / float64(ratioY)
-		uH = float64(1)
-	}
-
-	_minx := float64(centerX) - float64(size)*uW/2
-	_miny := float64(centerY) - float64(size)*uH/2
-	_maxx := float64(centerX) + float64(size)*uW/2
-	_maxy := float64(centerY) + float64(size)*uH/2
 
 	return image.Rect(int(_minx), int(_miny), int(_maxx), int(_maxy))
 }
