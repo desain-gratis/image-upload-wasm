@@ -41,7 +41,7 @@ func CropRGBA() js.Func {
 		centerY := args[6].Int()
 		ratioX := args[7].Int()
 		ratioY := args[8].Int()
-		spoke := args[9].Int()
+		scale := args[9].Float()
 
 		if size > (100 * (1 << 20)) {
 			fmt.Println("Ohnono, size too large (greater than 100 Mb)")
@@ -57,7 +57,7 @@ func CropRGBA() js.Func {
 		originalCopy.Pix = buffer
 		originalCopy.Stride = stride
 
-		crop := lib.CropByCenterAndSpoke(originalCopy.Bounds(), centerX, centerY, ratioX, ratioY, spoke)
+		crop := lib.CropByCenterAndScale(originalCopy.Bounds(), centerX, centerY, ratioX, ratioY, scale)
 
 		fmt.Println("DEBUG", crop.Dx(), crop.Dy())
 		// fmt.Println(crop.Min.X, crop.Min.Y, crop.Max.X, crop.Max.Y)
@@ -181,7 +181,7 @@ func Crop() js.Func {
 		centerY := args[3].Int()
 		ratioX := args[4].Int()
 		ratioY := args[5].Int()
-		spoke := args[6].Int()
+		scale := args[6].Float()
 
 		// validate size too large
 
@@ -220,7 +220,7 @@ func Crop() js.Func {
 		// centerY := img.Bounds().Min.Y + img.Bounds().Max.Y/2
 
 		// cropByCenterAndSpoke(img.Bounds(), centerX, centerY, 3, 1, 20000)
-		crop := lib.CropByCenterAndSpoke(img.Bounds(), centerX, centerY, ratioX, ratioY, spoke)
+		crop := lib.CropByCenterAndScale(img.Bounds(), centerX, centerY, ratioX, ratioY, scale)
 
 		// fmt.Println(crop.Min.X, crop.Min.Y, crop.Max.X, crop.Max.Y)
 		// fmt.Println(crop)
