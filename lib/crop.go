@@ -13,6 +13,9 @@ func CropByCenterAndScale(rect image.Rectangle, centerX int, centerY int, ratioX
 	y1 := centerY
 	y2 := rect.Max.Y - centerY
 
+	_ratioX := float64(ratioX)
+	_ratioY := float64(ratioY)
+
 	minX := x1
 	if x2 < x1 {
 		minX = x2
@@ -24,30 +27,38 @@ func CropByCenterAndScale(rect image.Rectangle, centerX int, centerY int, ratioX
 
 	// how many height can be taken, given limited width (min width)
 	// how many width can be taken, given limited height (min height)
-	maxWidth := minY * ratioX / ratioY
-	maxHeight := minX * ratioY / ratioX
+	maxWidth := float64(minY) * _ratioX / _ratioY
+	maxHeight := float64(minX) * _ratioY / _ratioX
 
-	// Check between the two, whos limiting who
-	boundedByWidth := false
-	if maxWidth < maxHeight {
+	var width, height float64
+
+	width = float64(minX)
+	if float64(minX) > maxWidth {
+		width = maxWidth
+	}
+	height = float64(minY)
+	if float64(minY) > maxHeight {
+		height = maxHeight
+	}
+
+	var boundedByWidth bool
+	if width < height {
 		boundedByWidth = true
 	}
 
-	width := maxHeight * ratioX / ratioY
-	height := maxHeight
-
 	if boundedByWidth {
-		width = maxWidth
-		height = maxWidth * ratioY / ratioX
+		height = float64(width) * _ratioY / _ratioX
+	} else {
+		width = float64(height) * _ratioX / _ratioY
 	}
 
 	width = width * 2
 	height = height * 2
 
-	width = int(float64(width) * scale)
-	height = int(float64(height) * scale)
+	width = float64(width) * scale
+	height = float64(height) * scale
 
-	return cropByCenterWidthHeight(centerX, centerY, width, height)
+	return cropByCenterWidthHeight(centerX, centerY, int(width), int(height))
 }
 
 func cropByCenterWidthHeight(centerX int, centerY int, width int, height int) image.Rectangle {

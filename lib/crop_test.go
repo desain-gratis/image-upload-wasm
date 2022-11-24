@@ -50,7 +50,7 @@ func TestCropByCenterAndscale(t *testing.T) {
 				ratioY: 2,
 				scale:  1,
 			},
-			want: image.Rect(208, 1, 1192, 1969),
+			want: image.Rect(207, 0, 1192, 1970),
 		},
 		{
 			name: "Centered. 1400x1970. 1400x1970. Should return the same rectangle.",
@@ -84,6 +84,17 @@ func TestCropByCenterAndscale(t *testing.T) {
 				scale:  0.5,
 			},
 			want: image.Rect(400, 225, 1200, 675),
+		},
+		{
+			name: "Centered. 4x3. 1920x1080. Scaled 1",
+			args: args{
+				rect:   image.Rect(0, 0, 1920, 1080),
+				center: image.Pt(960, 540),
+				ratioX: 4,
+				ratioY: 3,
+				scale:  1,
+			},
+			want: image.Rect(240, 0, 1680, 1080),
 		},
 	}
 	for _, tt := range tests {
