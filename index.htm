@@ -5,8 +5,10 @@
         <input type="button" id="upload" value="UPLOAD" />
         <a id="download" style="display:none">hehe</a>
 
-        
-        <script src="wasm_exec.js"></script>
+        <script src="./encode.js"></script>
+        <script src="./wasm_exec.js"></script>
+<!-- need to check each import best practices -->
+
         <script type="text/javascript">
             const go = new Go();
             WebAssembly.instantiateStreaming(fetch("image-upload.wasm"), go.importObject).then((result) => {
@@ -31,6 +33,8 @@
                                 // console.log(size);
 
                                 
+                                const fileName = e.target.files[i].name;
+
                                 // const gg = Crop(length, resultUint, size.width / 2 , size.height /2, 1, 1, 10000);
                                 
                                 const imageRGBA = GetRGBA(resultUint.length, resultUint)
@@ -54,22 +58,74 @@
                                 ]
 
                                 const crops = cropParams.map( (params) => {
-                                    return CropRGBA(
-                                    imageRGBA.success.data.length, 
-                                    imageRGBA.success.data,
-                                    imageRGBA.success.width,
-                                    imageRGBA.success.height,
-                                    imageRGBA.success.stride,
-                                    params[0],
-                                    params[1],
-                                    params[2],
-                                    params[3],
-                                    1.0 // set is as very large
-                                    )
+                                    return {
+                                        "name": `${params[2]}x${params[3]}-${e.target.files[i].name}`,
+                                        "ratio": `${params[2]}x${params[3]}`,
+                                        "data": CropRGBA(
+                                            imageRGBA.success.data.length, 
+                                            imageRGBA.success.data,
+                                            imageRGBA.success.width,
+                                            imageRGBA.success.height,
+                                            imageRGBA.success.stride,
+                                            params[0],
+                                            params[1],
+                                            params[2],
+                                            params[3],
+                                            1.0 // set is as very large
+                                            )
+                                    }
                                 })
 
                                 console.log("Crops");
                                 console.log(crops);
+
+                                crops.forEach(crop => {
+                                    const data = crop.data.success.data;
+                                    const length = data.byteLength;
+
+                                    const width = crop.data.success.width;
+                                    const height = crop.data.success.height;
+                                    const stride = crop.data.success.stride;
+
+                                    const filename = crop.name;
+
+                                    // allocate input 
+                                    // Copy result to mem
+                                    console.log("")
+                                    console.log("")
+                                    console.log("MALLOCING");
+                                    const mem = Module._malloc(length);
+                                    const resultSizeRef = Module._malloc(4);
+
+                                    Module.HEAPU8.set(new Uint8Array(data), mem);
+                                    Module.HEAPU8.set(new Uint32Array([0, 0, 0, 0]), resultSizeRef);
+
+
+                                    Module._dump(resultSizeRef, 4);
+
+                                    console.log("DONE MALLOCING");
+
+
+                                    const encodedWebpImageRef = Module._encodeRGBA(mem, width, height, stride, 90.0, resultSizeRef);
+
+                                    // 4 byte integer, size of the image
+                                    const resultSize = new Uint32Array(Module.HEAPU8.slice(resultSizeRef, resultSizeRef+4).buffer)[0];
+                                    console.log(resultSizeRef, resultSize); 
+                                    Module._dump(resultSizeRef, 4);
+
+
+
+                                    const resultArr = Module.HEAPU8.slice(encodedWebpImageRef, encodedWebpImageRef + resultSize);
+                                    const b = new Blob([resultArr.buffer], {type: "image/webp"}) ; // later change to image/webp
+
+                                    downloadDOM.href = window.URL.createObjectURL(b);
+                                    downloadDOM.download = filename;
+                                    downloadDOM.click();
+                                    window.URL.createObjectURL(b);
+
+                                    Module._falloc(resultSizeRef);
+                                    Module._falloc(mem);
+                                });
                             };
                             reader.readAsArrayBuffer(e.target.files[i]);
                         }
