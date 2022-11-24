@@ -53,12 +53,7 @@ extern "C"
         uint8_t *img_out;
         size_t size;
 
-        std::cout << "STARTING TO ENCODE\n";
         size = WebPEncodeRGBA(rgba, width, height, stride, qualityFactor, &img_out);
-
-        std::cout << "Size is: "
-                  << ((int)size) << ". \n";
-
         *len = size;
 
         return img_out;

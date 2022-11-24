@@ -38,7 +38,6 @@
                                 // const gg = Crop(length, resultUint, size.width / 2 , size.height /2, 1, 1, 10000);
                                 
                                 const imageRGBA = GetRGBA(resultUint.length, resultUint)
-                                console.log(imageRGBA);
 
                                 // centerX, centerY, ratioX, ratioY
                                 const cropParams = [
@@ -76,9 +75,6 @@
                                     }
                                 })
 
-                                console.log("Crops");
-                                console.log(crops);
-
                                 crops.forEach(crop => {
                                     const data = crop.data.success.data;
                                     const length = data.byteLength;
@@ -92,28 +88,16 @@
                                     // allocate input 
                                     // Copy result to mem
                                     console.log("")
-                                    console.log("")
-                                    console.log("MALLOCING");
                                     const mem = Module._malloc(length);
                                     const resultSizeRef = Module._malloc(4);
 
                                     Module.HEAPU8.set(new Uint8Array(data), mem);
                                     Module.HEAPU8.set(new Uint32Array([0, 0, 0, 0]), resultSizeRef);
 
-
-                                    Module._dump(resultSizeRef, 4);
-
-                                    console.log("DONE MALLOCING");
-
-
                                     const encodedWebpImageRef = Module._encodeRGBA(mem, width, height, stride, 90.0, resultSizeRef);
 
                                     // 4 byte integer, size of the image
                                     const resultSize = new Uint32Array(Module.HEAPU8.slice(resultSizeRef, resultSizeRef+4).buffer)[0];
-                                    console.log(resultSizeRef, resultSize); 
-                                    Module._dump(resultSizeRef, 4);
-
-
 
                                     const resultArr = Module.HEAPU8.slice(encodedWebpImageRef, encodedWebpImageRef + resultSize);
                                     const b = new Blob([resultArr.buffer], {type: "image/webp"}) ; // later change to image/webp

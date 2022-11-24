@@ -48,8 +48,6 @@ func CropRGBA() js.Func {
 			return nil
 		}
 
-		fmt.Println("DEBUG: ", width, height, stride, centerX, centerY, ratioX, ratioY, scale)
-
 		buffer := make([]byte, size)
 		bytesRead := js.CopyBytesToGo(buffer, data)
 		// in case we use fixed sized buffer
@@ -60,12 +58,6 @@ func CropRGBA() js.Func {
 		originalCopy.Stride = stride
 
 		crop := lib.CropByCenterAndScale(originalCopy.Bounds(), centerX, centerY, ratioX, ratioY, scale)
-
-		fmt.Println("DEBUG: ", crop.Min.X, crop.Min.Y, crop.Max.X, crop.Max.Y)
-
-		fmt.Println("DEBUG", crop.Dx(), crop.Dy())
-		// fmt.Println(crop.Min.X, crop.Min.Y, crop.Max.X, crop.Max.Y)
-		// fmt.Println(crop)
 
 		// todo can use sub image
 		cropped := image.NewRGBA(image.Rect(0, 0, crop.Max.X-crop.Min.X, crop.Max.Y-crop.Min.Y))
