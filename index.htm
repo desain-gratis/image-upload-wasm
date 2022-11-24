@@ -23,7 +23,7 @@
                     if (e.target.files && e.target.files[0]) {
                         for (let i = 0; i < e.target.files.length; i++) {
                             var reader = new FileReader();
-                            reader.onloadend = (buf) => {
+                            reader.onloadend = async (buf) =>  {
                                 const result = buf.target.result;
                                 const length = result.byteLength;
 
@@ -37,23 +37,36 @@
 
                                 // const gg = Crop(length, resultUint, size.width / 2 , size.height /2, 1, 1, 10000);
                                 
-                                const imageRGBA = GetRGBA(resultUint.length, resultUint)
+                                // If using golang
+                                // const _imageRGBA = GetRGBA(resultUint.length, resultUint)
+                                // const imageRGBA = _imageRGBA.success
+                               
+                                // If using canvas
+                                const img = await createImageBitmap(e.target.files[i]);
+                                // Make canvas same size as image
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                // Draw image onto canvas
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                const imageRGBA = ctx.getImageData(0, 0, img.width, img.height);
 
                                 // centerX, centerY, ratioX, ratioY
                                 const cropParams = [
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 1, 1],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 1, 2],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 1, 3],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 1, 4],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 2, 1],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 2, 3],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 3, 1],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 3, 2],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 3, 4],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 4, 1],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 4, 3],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 9, 16],
-                                    [imageRGBA.success.width/2, imageRGBA.success.height/2, 16, 9],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 1, 1],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 1, 2],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 1, 3],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 1, 4],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 2, 1],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 2, 3],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 3, 1],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 3, 2],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 3, 4],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 4, 1],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 4, 3],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 9, 16],
+                                    [imageRGBA.width/2, imageRGBA.height/2, 16, 9],
                                 ]
 
                                 const crops = cropParams.map( (params) => {
@@ -61,11 +74,12 @@
                                         "name": `${params[2]}x${params[3]}-${e.target.files[i].name}`,
                                         "ratio": `${params[2]}x${params[3]}`,
                                         "data": CropRGBA(
-                                            imageRGBA.success.data.length, 
-                                            imageRGBA.success.data,
-                                            imageRGBA.success.width,
-                                            imageRGBA.success.height,
-                                            imageRGBA.success.stride,
+                                            imageRGBA.data.length, 
+                                            imageRGBA.data,
+                                            imageRGBA.width,
+                                            imageRGBA.height,
+                                            // imageRGBA.stride,
+                                            imageRGBA.width * 4,
                                             params[0],
                                             params[1],
                                             params[2],
