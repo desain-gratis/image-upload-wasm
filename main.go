@@ -6,10 +6,11 @@ import (
 	"image"
 	"syscall/js"
 
-	"image/draw"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+
+	"golang.org/x/image/draw"
 
 	"github.com/id-auction/image-upload-wasm/lib"
 
@@ -21,6 +22,75 @@ func main() {
 	js.Global().Set("Crop", Crop())
 	js.Global().Set("GetRGBA", GetRGBA())
 	js.Global().Set("CropRGBA", CropRGBA())
+
+	// shared data
+	var counter int
+	shared := make(map[int]ImageData, 0)
+
+	js.Global().Set("StoreRGBA", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		data := args[0]
+
+		buffer := make([]byte, 5*(1<<20))
+		bytesRead := js.CopyBytesToGo(buffer, data)
+		// in case we use fixed sized buffer
+		buffer = buffer[:bytesRead]
+
+		shared[counter] = ImageData{
+			Data: buffer,
+		}
+		_counter := counter
+		counter++
+
+		return _counter
+	}))
+
+	js.Global().Set("ScaleWidthRGBA", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+
+		return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			if len(args) < 3 {
+				fmt.Println("Ohnono, args < 3")
+				return nil
+			}
+
+			idx := args[0].Int()
+			axis := args[1].String()
+			target := args[2].Int()
+
+			// in case we use fixed sized buffer
+
+			originalCopy := image.NewRGBA(image.Rect(0, 0, shared[idx].Width, shared[idx].Height))
+			originalCopy.Pix = shared[idx].Data
+			originalCopy.Stride = shared[idx].Stride
+
+			scale := float64(target) / float64(shared[idx].Width)
+			newWidth := target
+			newHeight := int(float64(shared[idx].Height) * scale)
+
+			if axis == "height" {
+				scale = float64(target) / float64(shared[idx].Height)
+				newWidth = int(float64(shared[idx].Width) * scale)
+				newHeight = target
+			}
+
+			scaled := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
+
+			draw.CatmullRom.Scale(scaled, scaled.Rect, originalCopy, originalCopy.Bounds(), draw.Over, nil)
+
+			dst := js.Global().Get("Uint8Array").New(len(scaled.Pix))
+			_ = js.CopyBytesToJS(dst, scaled.Pix)
+
+			return map[string]interface{}{
+				"success": map[string]interface{}{
+					"data":   dst,
+					"width":  scaled.Rect.Dx(),
+					"height": scaled.Rect.Dy(),
+					"stride": scaled.Stride,
+				},
+			}
+
+		})
+	}))
+
 	select {}
 }
 
@@ -43,8 +113,8 @@ func CropRGBA() js.Func {
 		ratioY := args[8].Int()
 		scale := args[9].Float()
 
-		if size > (100 * (1 << 20)) {
-			fmt.Println("Ohnono, size too large (greater than 100 Mb)")
+		if size > (200 * (1 << 20)) {
+			fmt.Println("Ohnono, size too large (greater than 200 Mb)")
 			return nil
 		}
 
@@ -75,6 +145,13 @@ func CropRGBA() js.Func {
 			},
 		}
 	})
+}
+
+type ImageData struct {
+	Data   []byte `json:"data"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
+	Stride int    `json:"stride"`
 }
 
 // GetRGBA without using Canvas :(
