@@ -52,6 +52,8 @@
                                 ctx.drawImage(img, 0, 0);
                                 const imageRGBA = ctx.getImageData(0, 0, img.width, img.height);
 
+                                // const idx = StoreRGBA(imageRGBA.data, imageRGBA.width, imageRGBA.height); // try no stride
+
                                 // centerX, centerY, ratioX, ratioY
                                 const cropParams = [
                                     [imageRGBA.width/2, imageRGBA.height/2, 1, 1],
@@ -70,10 +72,8 @@
                                 ]
 
                                 const crops = cropParams.map( (params) => {
-                                    return {
-                                        "name": `${params[2]}x${params[3]}-${e.target.files[i].name}`,
-                                        "ratio": `${params[2]}x${params[3]}`,
-                                        "data": CropRGBA(
+
+                                    const cropped = CropRGBA(
                                             imageRGBA.data.length, 
                                             imageRGBA.data,
                                             imageRGBA.width,
@@ -84,24 +84,42 @@
                                             params[1],
                                             params[2],
                                             params[3],
-                                            1.0 // set is as very large
-                                            )
+                                            1.0
+                                        )
+
+                                    const idx = StoreRGBA(cropped.success.data, cropped.success.width, cropped.success.height, cropped.success.stride);
+                                    // standarize height
+                                    const h600 = ScaleRGBA(idx, "height", 600)
+                                    // const h500 = ScaleRGBA(idx, "height", 500)
+                                    // const h400 = ScaleRGBA(idx, "height", 400)
+                                    // const h300 = ScaleRGBA(idx, "height", 300)
+                                    // const h250 = ScaleRGBA(idx, "height", 250)
+                                    // const h200 = ScaleRGBA(idx, "height", 200)
+                                    // const h150 = ScaleRGBA(idx, "height", 150)
+
+                                    
+                                    return {
+                                        "name": `${params[2]}x${params[3]}-${e.target.files[i].name}`,
+                                        "ratio": `${params[2]}x${params[3]}`,
+                                        "images": [cropped, h600],
                                     }
                                 })
 
+
+                                
                                 crops.forEach(crop => {
-                                    const data = crop.data.success.data;
+                                    const data = crop.images[0].success.data;
                                     const length = data.byteLength;
 
-                                    const width = crop.data.success.width;
-                                    const height = crop.data.success.height;
-                                    const stride = crop.data.success.stride;
+                                    const width = crop.images[0].success.width;
+                                    const height = crop.images[0].success.height;
+                                    const stride = crop.images[0].success.stride;
 
                                     const filename = crop.name;
 
                                     // allocate input 
                                     // Copy result to mem
-                                    console.log("")
+
                                     const mem = Module._malloc(length);
                                     const resultSizeRef = Module._malloc(4);
 

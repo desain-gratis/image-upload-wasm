@@ -25,70 +25,74 @@ func main() {
 
 	// shared data
 	var counter int
-	shared := make(map[int]ImageData, 0)
+	shared := make(map[int]*image.RGBA, 0)
 
 	js.Global().Set("StoreRGBA", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		data := args[0]
+		width := args[1].Int()
+		height := args[2].Int()
+		// stride := args[3].Int()
 
-		buffer := make([]byte, 5*(1<<20))
+		maxSize := 50 * (1 << 20) // THIS REALLY IMPORTANT IF WE DONT WANT OUR IMAGE TO GET CORRUTED eg. try img.Opaque() if not panic
+		buffer := make([]byte, maxSize)
 		bytesRead := js.CopyBytesToGo(buffer, data)
 		// in case we use fixed sized buffer
 		buffer = buffer[:bytesRead]
 
-		shared[counter] = ImageData{
-			Data: buffer,
-		}
+		img := image.NewRGBA(image.Rect(0, 0, width, height))
+		img.Pix = buffer
+		// img.Stride = stride
+
+		// log.Println("pasti panic")
+		// img.Opaque()
+		// log.Println("gak ke execute")
+
+		shared[counter] = img
 		_counter := counter
 		counter++
 
 		return _counter
 	}))
 
-	js.Global().Set("ScaleWidthRGBA", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	js.Global().Set("ScaleRGBA", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 3 {
+			fmt.Println("Ohnono, args < 3")
+			return nil
+		}
 
-		return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			if len(args) < 3 {
-				fmt.Println("Ohnono, args < 3")
-				return nil
-			}
+		idx := args[0].Int()
+		axis := args[1].String()
+		target := args[2].Int()
 
-			idx := args[0].Int()
-			axis := args[1].String()
-			target := args[2].Int()
+		// in case we use fixed sized buffer
 
-			// in case we use fixed sized buffer
+		src := shared[idx]
 
-			originalCopy := image.NewRGBA(image.Rect(0, 0, shared[idx].Width, shared[idx].Height))
-			originalCopy.Pix = shared[idx].Data
-			originalCopy.Stride = shared[idx].Stride
+		scale := float64(target) / float64(src.Rect.Dx())
+		newWidth := target
+		newHeight := int(float64(shared[idx].Rect.Dy()) * scale)
 
-			scale := float64(target) / float64(shared[idx].Width)
-			newWidth := target
-			newHeight := int(float64(shared[idx].Height) * scale)
+		if axis == "height" {
+			scale = float64(target) / float64(shared[idx].Rect.Dy())
+			newWidth = int(float64(shared[idx].Rect.Dx()) * scale)
+			newHeight = target
+		}
 
-			if axis == "height" {
-				scale = float64(target) / float64(shared[idx].Height)
-				newWidth = int(float64(shared[idx].Width) * scale)
-				newHeight = target
-			}
+		scaled := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
 
-			scaled := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
+		draw.CatmullRom.Scale(scaled, scaled.Bounds(), src, src.Bounds(), draw.Over, nil)
 
-			draw.CatmullRom.Scale(scaled, scaled.Rect, originalCopy, originalCopy.Bounds(), draw.Over, nil)
+		dst := js.Global().Get("Uint8Array").New(len(scaled.Pix))
+		_ = js.CopyBytesToJS(dst, scaled.Pix)
 
-			dst := js.Global().Get("Uint8Array").New(len(scaled.Pix))
-			_ = js.CopyBytesToJS(dst, scaled.Pix)
-
-			return map[string]interface{}{
-				"success": map[string]interface{}{
-					"data":   dst,
-					"width":  scaled.Rect.Dx(),
-					"height": scaled.Rect.Dy(),
-					"stride": scaled.Stride,
-				},
-			}
-
-		})
+		return map[string]interface{}{
+			"success": map[string]interface{}{
+				"data":   dst,
+				"width":  scaled.Rect.Dx(),
+				"height": scaled.Rect.Dy(),
+				"stride": scaled.Stride,
+			},
+		}
 	}))
 
 	select {}
