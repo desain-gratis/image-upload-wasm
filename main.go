@@ -18,10 +18,10 @@ import (
 )
 
 func main() {
-	js.Global().Set("GetSize", GetSize())
-	js.Global().Set("Crop", Crop())
-	js.Global().Set("GetRGBA", GetRGBA())
-	js.Global().Set("CropRGBA", CropRGBA())
+	// js.Global().Set("GetSize", GetSize())
+	// js.Global().Set("Crop", Crop())
+	// js.Global().Set("GetRGBA", GetRGBA())
+	// js.Global().Set("CropRGBA", CropRGBA())
 
 	// shared data
 	var counter int
@@ -82,15 +82,61 @@ func main() {
 
 		draw.CatmullRom.Scale(scaled, scaled.Bounds(), src, src.Bounds(), draw.Over, nil)
 
-		dst := js.Global().Get("Uint8Array").New(len(scaled.Pix))
-		_ = js.CopyBytesToJS(dst, scaled.Pix)
+		shared[counter] = scaled
+		_counter := counter
+		counter++
+
+		return _counter
+	}))
+
+	js.Global().Set("CropRGBA", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) < 4 {
+			fmt.Println("Ohnono, args < 5")
+			return nil
+		}
+
+		imgRef := args[0].Int()
+
+		centerX := args[1].Int()
+		centerY := args[2].Int()
+		ratioX := args[3].Int()
+		ratioY := args[4].Int()
+		scale := args[5].Float()
+
+		original := shared[imgRef]
+
+		originalCopy := image.NewRGBA(image.Rect(0, 0, original.Rect.Dx(), original.Rect.Dy()))
+		originalCopy.Pix = original.Pix
+		originalCopy.Stride = original.Stride
+
+		crop := lib.CropByCenterAndScale(originalCopy.Bounds(), centerX, centerY, ratioX, ratioY, scale)
+
+		// todo can use sub image
+		cropped := image.NewRGBA(image.Rect(0, 0, crop.Max.X-crop.Min.X, crop.Max.Y-crop.Min.Y))
+		draw.Draw(cropped, cropped.Rect, originalCopy, crop.Min, draw.Src)
+
+		shared[counter] = cropped
+		_counter := counter
+		counter++
+
+		return _counter
+	}))
+
+	js.Global().Set("RetrieveRGBA", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+
+		imgRef := args[0].Int()
+
+		rgba := shared[imgRef]
+
+		dst := js.Global().Get("Uint8Array").New(len(rgba.Pix))
+		_ = js.CopyBytesToJS(dst, rgba.Pix)
 
 		return map[string]interface{}{
 			"success": map[string]interface{}{
 				"data":   dst,
-				"width":  scaled.Rect.Dx(),
-				"height": scaled.Rect.Dy(),
-				"stride": scaled.Stride,
+				"width":  rgba.Rect.Dx(),
+				"height": rgba.Rect.Dy(),
+				"stride": rgba.Stride,
 			},
 		}
 	}))
